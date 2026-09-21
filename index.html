@@ -4,738 +4,516 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>The TED Investigator - Hard Mode</title>
-    
-    <!-- Tailwind CSS for modern responsive styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        tedBlue: '#00529c',
-                        tedRed: '#ed1c24',
-                        tedYellow: '#fff200',
-                        tedDark: '#1a1a24',
-                        chatBg: '#ece5dd',
-                        playerBubble: '#dcf8c6',
-                        staffBubble: '#ffffff'
-                    }
-                }
-            }
-        }
-    </script>
-
-    <!-- Font & Icon styles -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
-        * {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            box-sizing: border-box;
+        :root {
+            --blue: #00529c;
+            --red: #ed1c24;
+            --yellow: #fff200;
+            --dark-gray: #333;
+            --light-gray: #f5f6fa;
+            --chat-bg: #e5ddd5;
+            --player-msg: #dcf8c6;
+            --staff-msg: #ffffff;
         }
 
-        body {
-            background-color: #121218;
-            background-image: radial-gradient(#2a2a36 1px, transparent 1px);
-            background-size: 20px 20px;
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body { background-color: var(--dark-gray); display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+
+        #game-container {
+            width: 100%; max-width: 400px; height: 100vh; max-height: 800px;
+            background-color: var(--light-gray); position: relative; overflow: hidden;
+            display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
 
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.05);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 3px;
+        @media (min-width: 450px) {
+            #game-container { height: 90vh; border-radius: 30px; border: 10px solid #111; }
         }
 
-        /* Screen Transitions */
-        .screen {
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
-        .screen.active {
-            display: flex;
-            opacity: 1;
-        }
+        .screen { display: none; flex-direction: column; width: 100%; height: 100%; overflow-y: auto; background: white; }
+        .screen.active { display: flex; }
 
-        /* Chat bubbles animation */
-        .bubble {
-            animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes popIn {
-            from {
-                opacity: 0;
-                transform: scale(0.92) translateY(8px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        /* Toast animation */
-        @keyframes dropDown {
-            from {
-                transform: translate(-50%, -100%);
-                opacity: 0;
-            }
-            to {
-                transform: translate(-50%, 0);
-                opacity: 1;
-            }
-        }
-        .animate-toast {
-            animation: dropDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        /* Pulse wave effect for sound button */
-        .pulse-active {
-            box-shadow: 0 0 0 0 rgba(237, 28, 36, 0.7);
-            animation: pulseWave 1.5s infinite;
-        }
-        @keyframes pulseWave {
-            0% { box-shadow: 0 0 0 0 rgba(237, 28, 36, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(237, 28, 36, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(237, 28, 36, 0); }
-        }
-    </style>
-</head>
-<body class="min-h-screen flex items-center justify-center p-0 md:p-4 antialiased selection:bg-tedYellow selection:text-tedDark">
-
-    <!-- Game Viewport Frame -->
-    <div id="game-container" class="w-full max-w-[420px] h-screen md:h-[820px] bg-white md:rounded-[32px] shadow-2xl overflow-hidden relative flex flex-col border-0 md:border-[8px] border-slate-800">
-
-        <!-- Notification Toast for Badges -->
-        <div id="badge-toast" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-tedYellow text-tedDark px-5 py-2.5 rounded-full font-bold shadow-lg z-50 text-sm flex items-center gap-2 border border-yellow-400 animate-toast">
-            <span id="badge-icon">ðŸ†</span>
-            <span id="badge-text">Badge Unlocked!</span>
-        </div>
-
-        <!-- Custom Alert Modal (No window.alert) -->
-        <div id="alert-modal" class="hidden absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-            <div class="bg-white rounded-2xl p-6 text-center max-w-xs shadow-2xl border-t-4 border-tedRed animate-popIn">
-                <div class="text-3xl mb-2">âš ï¸</div>
-                <h3 class="font-bold text-slate-800 text-lg mb-2">Pemberitahuan</h3>
-                <p id="alert-msg" class="text-slate-600 text-sm mb-5">Harap lengkapi semua data terlebih dahulu!</p>
-                <button onclick="closeAlert()" class="w-full py-2.5 bg-tedBlue text-white font-semibold rounded-xl hover:bg-blue-800 transition">Pengertian</button>
-            </div>
-        </div>
-
-        <!-- 1. Gateway Screen -->
-        <div id="gateway" class="screen active flex-col h-full bg-slate-50 justify-between p-6">
-            <div class="flex flex-col items-center pt-6">
-                <div class="w-20 h-20 bg-tedBlue rounded-3xl flex items-center justify-center text-4xl shadow-lg shadow-blue-500/20 text-white mb-4 border-b-4 border-tedRed transform hover:rotate-3 transition-transform">
-                    ðŸ•µï¸â€â™‚ï¸
-                </div>
-                <h1 class="text-2xl font-black text-tedBlue tracking-tight text-center">The TED Investigator</h1>
-                <span class="inline-block px-3 py-1 bg-red-100 text-tedRed rounded-full text-xs font-bold mt-1 uppercase tracking-wider">
-                    Level: Professional (Hard)
-                </span>
-            </div>
-
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nama Pemain</label>
-                    <input type="text" id="playerName" placeholder="Ketik nama Anda..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-tedBlue focus:ring-2 focus:ring-blue-100 outline-none transition text-sm font-medium">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">NIK</label>
-                    <input type="number" id="playerNIK" placeholder="Ketik NIK Anda..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-tedBlue focus:ring-2 focus:ring-blue-100 outline-none transition text-sm font-medium">
-                </div>
-            </div>
-
-            <div class="bg-amber-50 border-l-4 border-amber-400 p-3.5 rounded-r-xl">
-                <p class="text-xs text-amber-800 italic leading-relaxed">
-                    "Banyak SPV merasa sudah menggali dengan benar, padahal mereka hanya memberikan pertanyaan tertutup (Yes/No) yang membatasi informasi."
-                </p>
-            </div>
-
-            <div>
-                <button onclick="goToBriefing()" class="w-full py-4 bg-tedYellow hover:bg-yellow-300 text-tedDark font-extrabold rounded-2xl shadow-lg shadow-yellow-500/20 active:scale-[0.98] transition flex items-center justify-center gap-2 text-base">
-                    <span>Masuk ke Simulasi</span>
-                    <i class="fa-solid fa-arrow-right text-xs"></i>
-                </button>
-                <footer class="text-center text-[11px] text-slate-400 mt-4 font-medium">
-                    Education & Training Dept. &copy; 2026
-                </footer>
-            </div>
-        </div>
-
-        <!-- 2. Briefing Screen -->
-        <div id="briefing" class="screen flex-col h-full bg-white justify-between p-6">
-            <div class="space-y-4">
-                <div class="border-b-2 border-slate-100 pb-3 flex items-center justify-between">
-                    <h2 class="text-xl font-bold text-tedRed flex items-center gap-2">
-                        <i class="fa-solid fa-clipboard-list"></i>
-                        <span>Mission Briefing</span>
-                    </h2>
-                    <span class="text-xs text-slate-400 font-semibold">Instruksi</span>
-                </div>
-
-                <div class="p-4 bg-red-50 border border-red-100 rounded-2xl text-xs text-red-900 leading-relaxed font-medium">
-                    <p class="font-bold mb-1 uppercase tracking-wide text-tedRed">ðŸš¨ AWAS JEBAKAN:</p>
-                    Jawaban yang salah di level ini <strong>tidak lagi terdengar kasar</strong>. Mereka akan terdengar sangat profesional layaknya instruksi manajer senior!
-                </div>
-
-                <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
-                    <p class="font-bold text-slate-800 text-sm">Aturan Investigasi:</p>
-                    
-                    <div class="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                        <span class="text-base">ðŸ’¬</span>
-                        <div>
-                            <strong class="text-slate-800">Laporan Lapangan:</strong> Staf toko akan menghubungi Anda terkait masalah aktual di lapangan.
-                        </div>
-                    </div>
-
-                    <div class="flex items-start gap-3 p-3 bg-blue-50/60 rounded-xl border border-blue-100">
-                        <span class="text-base">ðŸ©º</span>
-                        <div>
-                            <strong class="text-tedBlue">Pendekatan Dokter (T.E.D):</strong> Gunakan <i>Tell me</i>, <i>Explain to me</i>, atau <i>Describe to me</i> (Ceritakan, Jelaskan, Gambarkan) untuk menggali fakta objektif.
-                        </div>
-                    </div>
-
-                    <div class="flex items-start gap-3 p-3 bg-amber-50/60 rounded-xl border border-amber-100">
-                        <span class="text-base">ðŸ”®</span>
-                        <div>
-                            <strong class="text-amber-900">Hindari Pendekatan Dukun:</strong> Pertanyaan Yes/No, tebakan SOP, atau pertanyaan pilihan ganda akan mengunci informasi kunci.
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <button onclick="startGame()" class="w-full py-4 bg-tedBlue hover:bg-blue-800 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/20 active:scale-[0.98] transition flex items-center justify-center gap-2">
-                <i class="fa-solid fa-play text-xs"></i>
-                <span>Siap, Mulai Permainan!</span>
-            </button>
-        </div>
-
-        <!-- 3. Chat Screen -->
-        <div id="chat-screen" class="screen flex-col h-full bg-chatBg">
-            <!-- Header -->
-            <div class="bg-tedBlue text-white p-3.5 flex items-center justify-between shadow-md relative z-20 border-b-4 border-tedRed">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg border border-white/30">
-                        ðŸ‘¨â€ðŸ’¼
-                    </div>
-                    <div>
-                        <span id="display-name" class="font-bold text-sm block leading-tight">Supervisor</span>
-                        <div class="flex items-center gap-2 text-[11px] opacity-90 font-medium">
-                            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span>Online &bull; <span id="score-display">0</span> Pts</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button id="mute-btn" onclick="toggleMute()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition flex items-center justify-center text-sm" title="Mute/Unmute Audio">
-                        ðŸ”Š
-                    </button>
-                </div>
-            </div>
-
-            <!-- Progress Bar Container -->
-            <div class="w-full bg-slate-300 h-1.5 relative z-10">
-                <div id="progress-bar" class="h-full bg-tedRed transition-all duration-300 w-0"></div>
-            </div>
-
-            <!-- Chat History area -->
-            <div id="chat-history" class="flex-grow p-4 overflow-y-auto space-y-3 flex flex-col scroll-smooth">
-                <!-- Chat bubbles dynamically injected here -->
-            </div>
-
-            <!-- Typing Indicator -->
-            <div id="typing-indicator" class="hidden px-4 py-1 text-xs text-slate-500 italic font-medium flex items-center gap-1.5">
-                <span class="inline-block w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
-                <span class="inline-block w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                <span class="inline-block w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                <span>Staf sedang mengetik...</span>
-            </div>
-
-            <!-- Chat Response Options -->
-            <div id="chat-options" class="bg-slate-100 p-3 border-t border-slate-300 space-y-2 max-h-60 overflow-y-auto">
-                <!-- Buttons dynamically injected here -->
-            </div>
-        </div>
-
-        <!-- 4. Debrief Screen -->
-        <div id="debrief" class="screen flex-col h-full bg-slate-50 justify-between p-5 overflow-y-auto">
-            <div>
-                <header class="bg-tedBlue text-white p-4 -mx-5 -mt-5 mb-5 text-center relative border-b-4 border-tedRed shadow-sm">
-                    <h2 class="font-bold text-lg">Performance Review</h2>
-                    <div class="h-1 bg-tedYellow w-full absolute bottom-0 left-0"></div>
-                </header>
-
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center mb-5">
-                    <div id="final-score" class="w-24 h-24 rounded-full bg-tedBlue text-white flex items-center justify-center text-3xl font-black mx-auto mb-3 border-4 border-tedYellow shadow-inner">
-                        100
-                    </div>
-                    <h3 id="result-title" class="font-extrabold text-xl text-slate-800">Diagnostician Master ðŸŒŸ</h3>
-                    <p id="result-message" class="text-xs text-slate-600 mt-2 leading-relaxed font-medium">
-                        Hasil analisis akan ditampilkan di sini.
-                    </p>
-                </div>
-
-                <h4 class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-list-check text-tedBlue"></i>
-                    <span>Review Kasus Anda:</span>
-                </h4>
-                <div id="review-list" class="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    <!-- Case reviews injected here -->
-                </div>
-            </div>
-
-            <button onclick="restartGame()" class="w-full py-3.5 bg-tedYellow hover:bg-yellow-300 text-tedDark font-extrabold rounded-2xl shadow-md active:scale-[0.98] transition mt-4">
-                ðŸ”„ Main Lagi
-            </button>
-        </div>
-
-    </div>
-
-    <script>
-        // --- GAMIFICATION DATA (HARD MODE) ---
-        // Pilihan Dukun kini terdengar sangat profesional/SOP, namun tetap berupa pertanyaan tertutup (Yes/No) atau pilihan ganda.
-        const questions = [
-            {
-                trigger: "Pak, pelanggan di kasir marah-marah nih, antrean jadi panjang!",
-                options: [
-                    { text: "A: Apakah kamu sudah mencoba meminta maaf dan mengarahkan pelanggannya ke area tunggu?", type: "dukun" },
-                    { text: "B: Pelanggannya komplain masalah lambatnya transaksi e-wallet atau ada selisih harga promo?", type: "dukun" },
-                    { text: "C: Coba ceritakan dari awal, apa ucapan atau kejadian yang memicu pelanggan tersebut mulai marah?", type: "dokter" }
-                ],
-                feedback: {
-                    dukun: "Staf: 'Sudah pak/Bukan pak...' (Informasi tertutup karena Anda memberikan pertanyaan pilihan ganda/Yes-No).",
-                    dokter: "Staf: 'Jadi gini pak, mesin EDC-nya tiba-tiba mati pas lagi proses gesek, pelanggannya buru-buru ke bandara...' (Akar masalah ditemukan)."
-                }
-            },
-            {
-                trigger: "Barang di rak 3 lorong snack kosong terus nih dari tadi pagi.",
-                options: [
-                    { text: "A: Jelaskan secara spesifik proses pengecekan stok yang sudah kamu lakukan di gudang hari ini.", type: "dokter" },
-                    { text: "B: Sudah dipastikan barangnya tidak ada yang terselip di keranjang retur atau belum di-display shift sebelumnya?", type: "dukun" },
-                    { text: "C: Apakah secara sistem (komputer) stok barangnya memang sedang kosong atau minus?", type: "dukun" }
-                ],
-                feedback: {
-                    dukun: "Staf: 'Udah dipastiin nggak ada pak.' (Investigasi buntu karena pertanyaan Yes/No).",
-                    dokter: "Staf: 'Saya sudah cek rak gudang area B dan sistem pak. Di sistem ada 5 karton, sepertinya label lot-nya tertukar dengan barang lain.' (Fakta aktual terlihat)."
-                }
-            },
-            {
-                trigger: "Pak, Oden-nya nggak laku-laku nih, udah dingin dan nggak menarik.",
-                options: [
-                    { text: "A: Suhunya sudah kamu atur sesuai standar operasional yang ada di buku panduan kan?", type: "dukun" },
-                    { text: "B: Gambarkan detail bagaimana kondisi lampu indikator mesin pemanas dan volume kuah Oden saat ini.", type: "dokter" },
-                    { text: "C: Apa elemen pemanasnya bermasalah sehingga kuahnya tidak bisa mencapai suhu maksimal?", type: "dukun" }
-                ],
-                feedback: {
-                    dukun: "Staf: 'Iya pak, sudah.' (Staf cenderung defensif mengiyakan agar aman).",
-                    dokter: "Staf: 'Lampu indikatornya kedap-kedip merah pak, dan suhunya tertahan di 40 derajat sejak 2 jam lalu.' (Diagnosa teknis tepat!)."
-                }
-            },
-            {
-                trigger: "Si Budi belum datang juga nih pak gantiin shift saya, saya mau pulang.",
-                options: [
-                    { text: "A: Sudah coba ditelepon atau di-WhatsApp langsung ke nomor pribadinya Budi belum?", type: "dukun" },
-                    { text: "B: Apakah ada info dari teman shift lain kalau Budi mungkin telat karena macet atau kehujanan?", type: "dukun" },
-                    { text: "C: Ceritakan detail komunikasi atau pesan terakhirmu dengan Budi hari ini sebelum jam pergantian shift.", type: "dokter" }
-                ],
-                feedback: {
-                    dukun: "Staf: 'Sudah pak, tapi nggak aktif.' (Buntu).",
-                    dokter: "Staf: 'Tadi jam 12 dia WA katanya motornya diserempet dan lagi di polsek pak, ini saya kasih screenshotnya.' (Fakta krusial terbongkar)."
-                }
-            },
-            {
-                trigger: "Pak, pas saya hitung pergantian shift, selisih stok rokok di gudang minus 5 slop.",
-                options: [
-                    { text: "A: Jelaskan langkah demi langkah proses penghitungan fisik stok rokok yang baru saja kamu lakukan.", type: "dokter" },
-                    { text: "B: Apakah kamu sudah mencocokkan angka hitungan fisik dengan data penerimaan barang dari DC kemarin?", type: "dukun" },
-                    { text: "C: Ini minus karena ada selisih hitung dari shift malam sebelumnya atau ada barang rusak?", type: "dukun" }
-                ],
-                feedback: {
-                    dukun: "Staf: 'Sudah dicocokkan pak, tapi tetap minus.' (Investigasi berhenti di sini).",
-                    dokter: "Staf: 'Saya hitung fisik di rak utama dan area kasir pak, eh ternyata yang 5 slop masih di dalam karung retur BKB.' (Human error proses hitung ditemukan)."
-                }
-            },
-            {
-                trigger: "Ada konsumen komplain berat, harga di rak promo sama di struk kasir beda jauh!",
-                options: [
-                    { text: "A: Apakah label harga di rak belum sempat kamu update dengan planogram promo yang baru jalan hari ini?", type: "dukun" },
-                    { text: "B: Beda harganya karena sistem kasir kita belum sinkron dengan harga promo dari pusat ya?", type: "dukun" },
-                    { text: "C: Gambarkan secara jelas detail barangnya, serta selisih nominal harga antara label di rak dengan struk.", type: "dokter" }
-                ],
-                feedback: {
-                    dukun: "Staf: 'Labelnya udah diganti kok pak.' (Anda terjebak melempar asumsi/tuduhan halus).",
-                    dokter: "Staf: 'Itemnya Susu Kaleng 800g Coklat pak, di rak labelnya masih promo 75rb, di kasir normal 90rb. Ternyata yang promo cuma varian Vanilla pak.' (Analisis root cause jelas)."
-                }
-            },
-            {
-                trigger: "Pak, freezer ice cream airnya meleleh sampai ke lantai, kotor banget.",
-                options: [
-                    { text: "A: Jelaskan informasi angka dan status apa saja yang saat ini tertera di layar panel suhu freezer tersebut.", type: "dokter" },
-                    { text: "B: Bocornya karena karet pintunya kurang rapat ditutup konsumen atau ada tumpahan es di bagian dalam?", type: "dukun" },
-                    { text: "C: Sudah coba dibersihkan lantainya dan dicek apakah saluran pembuangan air di bawahnya mampet?", type: "dukun" }
-                ],
-                feedback: {
-                    dukun: "Staf: 'Sepertinya mampet pak.' (Staf hanya menebak ulang tebakan Anda).",
-                    dokter: "Staf: 'Di panel layarnya muncul error E4 pak, dan suhunya -2 derajat padahal harusnya -18.' (Kode error teknisi bisa langsung ditindaklanjuti)."
-                }
-            },
-            {
-                trigger: "Mesin kasir 2 tiba-tiba hang pas lagi transaksi pakai QRIS e-wallet.",
-                options: [
-                    { text: "A: Apakah aplikasinya yang error 'Time Out' atau koneksi internet tokonya yang sedang putus-putus?", type: "dukun" },
-                    { text: "B: Coba ceritakan secara berurutan, tombol atau menu apa saja yang kamu tekan sebelum layarnya freeze.", type: "dokter" },
-                    { text: "C: Sudah dicoba lakukan restart mesin kasir sesuai prosedur dari tim IT atau belum?", type: "dukun" }
-                ],
-                feedback: {
-                    dukun: "Staf: 'Udah di-restart pak tapi tetep.' (Masalah teknis tidak terpetakan).",
-                    dokter: "Staf: 'Saya scan QRIS pelanggannya, loading lama, lalu saya pencet tombol ESC dua kali barengan sama Enter pak, terus layarnya blank.' (Penyebab sistem error diketahui)."
-                }
-            },
-            {
-                trigger: "Pak, ada ibu-ibu mau retur roti, katanya udah berjamur padahal exp date besok.",
-                options: [
-                    { text: "A: Apakah kamu sudah memeriksa nota pembelian ibu tersebut untuk memastikan belinya memang di toko kita?", type: "dukun" },
-                    { text: "B: Rotinya berjamur karena ditaruh di tempat yang lembap oleh konsumennya sendiri di rumah kan?", type: "dukun" },
-                    { text: "C: Gambarkan secara spesifik bagaimana kondisi kemasan plastik roti tersebut saat ibu itu membawanya.", type: "dokter" }
-                ],
-                feedback: {
-                    dukun: "Staf: 'Ada notanya pak.' (Anda memvalidasi prosedur retur, tapi gagal mendiagnosa kenapa roti rusak sebelum waktunya).",
-                    dokter: "Staf: 'Plastik depannya ada lubang kecil bekas gigitan tikus pak, sepertinya dari rumah ibunya, pantesan udara masuk.' (Toko terselamatkan dari komplain produk cacat pabrik)."
-                }
-            },
-            {
-                trigger: "Checklist kebersihan area sales (toilet & lorong) udah saya isi full ya pak.",
-                options: [
-                    { text: "A: Apakah area bawah pinggiran rak dan sudut lorong toilet juga sudah dipastikan benar-benar disikat?", type: "dukun" },
-                    { text: "B: Ceritakan area mana saja yang memakan waktu paling lama saat dibersihkan dan prosedur apa yang kamu gunakan.", type: "dokter" },
-                    { text: "C: Sudah disesuaikan kan hasil kerjaan kamu dengan standar kebersihan visual yang ada di SOP kita?", type: "dukun" }
-                ],
-                feedback: {
-                    dukun: "Staf: 'Sudah sesuai SOP pak.' (Jawaban template untuk pertanyaan template).",
-                    dokter: "Staf: 'Eee.. saya baru pel lorong utama aja pak pakai air biasa, cairan karbol toiletnya ternyata habis dari kemarin belum dateng.' (Kualitas kerja sebenarnya terungkap)."
-                }
-            }
-        ];
-
-        // --- GAME STATE & AUDIO LOGIC ---
-        let currentQ = 0;
-        let score = 0;
-        let userName = "";
-        let userReview = [];
-        let audioEnabled = true;
-        let audioCtx;
-        let bgmInterval;
-
-        function initAudio() {
-            if (!audioCtx) {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (AudioContextClass) {
-                    audioCtx = new AudioContextClass();
-                }
-            }
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        }
-
-        function playTone(freq, type, duration, vol = 0.1) {
-            if (!audioEnabled || !audioCtx) return;
-            try {
-                const osc = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                osc.type = type;
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-                osc.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + duration);
-            } catch (e) {
-                console.log("Audio error:", e);
-            }
-        }
-
-        function playBGM() {
-            if (bgmInterval) clearInterval(bgmInterval);
-            const notes = [261.63, 329.63, 392.00, 329.63]; 
-            let index = 0;
-            bgmInterval = setInterval(() => {
-                if (audioEnabled) {
-                    playTone(notes[index % notes.length] / 2, 'sine', 0.5, 0.015);
-                    index++;
-                }
-            }, 800);
-        }
-
-        function sfxCorrect() {
-            setTimeout(() => playTone(523.25, 'square', 0.1, 0.04), 0);
-            setTimeout(() => playTone(659.25, 'square', 0.1, 0.04), 100);
-            setTimeout(() => playTone(783.99, 'square', 0.2, 0.04), 200);
-        }
-
-        function sfxWrong() {
-            playTone(150, 'sawtooth', 0.25, 0.06);
-            setTimeout(() => playTone(130, 'sawtooth', 0.35, 0.06), 140);
+        header {
+            background-color: var(--blue); color: white; padding: 15px; text-align: center;
+            border-bottom: 4px solid var(--red); position: relative; z-index: 10;
         }
         
-        function sfxChat() { 
-            playTone(800, 'sine', 0.04, 0.02); 
+        .accent-line { height: 4px; background-color: var(--yellow); width: 100%; position: absolute; bottom: -4px; left: 0; }
+
+        input[type="text"], input[type="number"] {
+            width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;
         }
 
-        function toggleMute() {
-            audioEnabled = !audioEnabled;
-            const btn = document.getElementById('mute-btn');
-            btn.innerText = audioEnabled ? 'ðŸ”Š' : 'ðŸ”‡';
-            if (audioEnabled) {
-                initAudio();
+        button {
+            width: 100%; padding: 14px; border: none; border-radius: 8px; background-color: var(--blue);
+            color: white; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        .btn-yellow { background-color: var(--yellow); color: var(--dark-gray); }
+
+        #gateway, #briefing { padding: 30px 20px; text-align: center; justify-content: center; }
+        .logo-placeholder { font-size: 50px; margin-bottom: 10px; }
+        .hook-text { font-style: italic; color: #666; margin: 20px 0; font-size: 14px; }
+        footer { margin-top: auto; padding: 20px; font-size: 12px; color: #999; }
+
+        #chat-screen { background-color: var(--chat-bg); }
+        
+        .chat-header {
+            display: flex; justify-content: space-between; align-items: center;
+            background-color: var(--blue); color: white; padding: 10px 15px; font-weight: bold;
+        }
+
+        .controls { display: flex; gap: 10px; align-items: center; }
+        #mute-btn { background: none; border: none; font-size: 20px; width: auto; margin: 0; padding: 0;}
+
+        .progress-container { width: 100%; background: #ddd; height: 8px; }
+        .progress-bar { height: 100%; background: var(--red); width: 0%; transition: width 0.3s ease; }
+
+        .chat-history { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+
+        .bubble {
+            max-width: 85%; padding: 10px 15px; border-radius: 15px; font-size: 14px; line-height: 1.4;
+            position: relative; animation: popIn 0.3s ease-out;
+        }
+        .bubble.staff { background: var(--staff-msg); align-self: flex-start; border-bottom-left-radius: 0; box-shadow: 1px 1px 3px rgba(0,0,0,0.1); }
+        .bubble.player { background: var(--player-msg); align-self: flex-end; border-bottom-right-radius: 0; box-shadow: -1px 1px 3px rgba(0,0,0,0.1); }
+        .bubble.feedback {
+            background: #fff3cd; color: #856404; align-self: center; font-size: 12px; text-align: center;
+            font-weight: bold; border: 1px solid #ffeeba; border-radius: 8px; width: 90%;
+        }
+
+        .typing-indicator { font-size: 12px; color: #888; align-self: flex-start; margin-left: 10px; display: none; }
+
+        .chat-options { background: #f0f0f0; padding: 10px; border-top: 1px solid #ccc; display: flex; flex-direction: column; gap: 8px; }
+        .chat-options button { 
+            margin: 0; text-align: left; background: white; color: var(--dark-gray); 
+            border: 1px solid #ccc; font-weight: normal; font-size: 13px; line-height: 1.3; padding: 12px;
+        }
+        .chat-options button:hover { background: #e9ecef; border-color: var(--blue); }
+
+        #debrief { padding: 20px; }
+        .result-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; background: var(--blue); color: white; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; margin: 0 auto 15px; border: 5px solid var(--yellow); }
+        .review-item { background: #f9f9f9; padding: 10px; margin-bottom: 10px; border-left: 4px solid var(--blue); font-size: 13px; }
+        
+        .badge-toast {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: var(--yellow); color: var(--dark-gray);
+            padding: 10px 20px; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            display: none; z-index: 100; animation: dropDown 0.5s ease-out;
+        }
+
+        @keyframes popIn { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes dropDown { from { top: -50px; opacity: 0; } to { top: 20px; opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    
+    <div id="badge-toast" class="badge-toast">ðŸ† Badge Unlocked!</div>
+
+    <!-- 1. Gateway Screen -->
+    <div id="gateway" class="screen active">
+        <div class="logo-placeholder">ðŸ•µï¸â€â™‚ï¸</div>
+        <h1 style="color: var(--blue);">The TED Investigator</h1>
+        <p style="margin-top: 10px; color: #555;">Level: Professional (Hard)</p>
+        
+        <div style="text-align: left; margin-top: 30px;">
+            <label>Nama Pemain:</label>
+            <input type="text" id="playerName" placeholder="Ketik nama Anda...">
+            
+            <label>NIK:</label>
+            <input type="number" id="playerNIK" placeholder="Ketik NIK Anda...">
+        </div>
+        
+        <p class="hook-text">"Banyak SPV merasa sudah menggali dengan benar, padahal mereka hanya memberikan pertanyaan tertutup (Yes/No) yang membatasi informasi."</p>
+        
+        <button class="btn-yellow" onclick="goToBriefing()">Masuk ke Simulasi</button>
+        
+        <footer>Education & Training Dept. &copy; 2026</footer>
+    </div>
+
+    <!-- 2. Briefing Screen -->
+    <div id="briefing" class="screen">
+        <h2 style="color: var(--red);">Mission Briefing</h2>
+        <div style="text-align: left; margin-top: 20px; font-size: 14px; line-height: 1.6;">
+            <p><strong>AWAS JEBAKAN:</strong> Jawaban yang salah di sini tidak lagi terdengar kasar. Mereka akan terdengar seperti instruksi manajer pada umumnya.</p>
+            <br>
+            <p><strong>Aturan Main:</strong></p>
+            <ul style="padding-left: 20px;">
+                <li>Staf akan melaporkan masalah di lapangan.</li>
+                <li>Pilih respons <strong>Dokter</strong> (T.E.D: Tell me, Explain to me, Describe to me / Ceritakan, Jelaskan, Gambarkan).</li>
+                <li>HINDARI respons <strong>Dukun</strong>: Meskipun terdengar profesional, pertanyaan tertutup (Yes/No), asumsi SOP, atau pilihan ganda hanya akan membuat info penting terkunci.</li>
+            </ul>
+        </div>
+        
+        <button class="btn-blue" style="margin-top: 40px;" onclick="startGame()">Siap, Mulai Permainan!</button>
+    </div>
+
+    <!-- 3. Chat Screen -->
+    <div id="chat-screen" class="screen">
+        <div class="chat-header">
+            <div>
+                <span id="display-name">Supervisor</span>
+                <div style="font-size: 10px; font-weight: normal;">Online - <span id="score-display">0</span> Pts</div>
+            </div>
+            <div class="controls">
+                <button id="mute-btn" onclick="toggleMute()">ðŸ”Š</button>
+            </div>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div class="chat-history" id="chat-history"></div>
+        <div class="typing-indicator" id="typing-indicator">Staf sedang mengetik...</div>
+
+        <div class="chat-options" id="chat-options"></div>
+    </div>
+
+    <!-- 4. Debrief Screen -->
+    <div id="debrief" class="screen">
+        <header>
+            <h2>Performance Review</h2>
+            <div class="accent-line"></div>
+        </header>
+        
+        <div class="result-card" style="margin-top: 20px;">
+            <div class="score-circle" id="final-score">100</div>
+            <h3 id="result-title">Diagnostician Master</h3>
+            <p id="result-message" style="margin-top: 10px; font-size: 14px; color: #666;"></p>
+        </div>
+
+        <h4 style="margin-bottom: 10px;">Review Kasus Anda:</h4>
+        <div id="review-list" style="max-height: 250px; overflow-y: auto;"></div>
+
+        <button onclick="location.reload()" class="btn-yellow">Main Lagi</button>
+    </div>
+
+</div>
+
+<script>
+    // --- GAMIFICATION DATA (HARD MODE) ---
+    // Pilihan Dukun kini terdengar sangat profesional/SOP, namun tetap berupa pertanyaan tertutup (Yes/No) atau pilihan ganda.
+    const questions = [
+        {
+            trigger: "Pak, pelanggan di kasir marah-marah nih, antrean jadi panjang!",
+            options: [
+                { text: "A: Apakah kamu sudah mencoba meminta maaf dan mengarahkan pelanggannya ke area tunggu?", type: "dukun" },
+                { text: "B: Pelanggannya komplain masalah lambatnya transaksi e-wallet atau ada selisih harga promo?", type: "dukun" },
+                { text: "C: Coba ceritakan dari awal, apa ucapan atau kejadian yang memicu pelanggan tersebut mulai marah?", type: "dokter" }
+            ],
+            feedback: {
+                dukun: "Staf: 'Sudah pak/Bukan pak...' (Informasi tertutup karena Anda memberikan pertanyaan pilihan ganda/Yes-No).",
+                dokter: "Staf: 'Jadi gini pak, mesin EDC-nya tiba-tiba mati pas lagi proses gesek, pelanggannya buru-buru ke bandara...' (Akar masalah ditemukan)."
+            }
+        },
+        {
+            trigger: "Barang di rak 3 lorong snack kosong terus nih dari tadi pagi.",
+            options: [
+                { text: "A: Jelaskan secara spesifik proses pengecekan stok yang sudah kamu lakukan di gudang hari ini.", type: "dokter" },
+                { text: "B: Sudah dipastikan barangnya tidak ada yang terselip di keranjang retur atau belum di-display shift sebelumnya?", type: "dukun" },
+                { text: "C: Apakah secara sistem (komputer) stok barangnya memang sedang kosong atau minus?", type: "dukun" }
+            ],
+            feedback: {
+                dukun: "Staf: 'Udah dipastiin nggak ada pak.' (Investigasi buntu karena pertanyaan Yes/No).",
+                dokter: "Staf: 'Saya sudah cek rak gudang area B dan sistem pak. Di sistem ada 5 karton, sepertinya label lot-nya tertukar dengan barang lain.' (Fakta aktual terlihat)."
+            }
+        },
+        {
+            trigger: "Pak, Oden-nya nggak laku-laku nih, udah dingin dan nggak menarik.",
+            options: [
+                { text: "A: Suhunya sudah kamu atur sesuai standar operasional yang ada di buku panduan kan?", type: "dukun" },
+                { text: "B: Gambarkan detail bagaimana kondisi lampu indikator mesin pemanas dan volume kuah Oden saat ini.", type: "dokter" },
+                { text: "C: Apa elemen pemanasnya bermasalah sehingga kuahnya tidak bisa mencapai suhu maksimal?", type: "dukun" }
+            ],
+            feedback: {
+                dukun: "Staf: 'Iya pak, sudah.' (Staf cenderung defensif mengiyakan agar aman).",
+                dokter: "Staf: 'Lampu indikatornya kedap-kedip merah pak, dan suhunya tertahan di 40 derajat sejak 2 jam lalu.' (Diagnosa teknis tepat!)."
+            }
+        },
+        {
+            trigger: "Si Budi belum datang juga nih pak gantiin shift saya, saya mau pulang.",
+            options: [
+                { text: "A: Sudah coba ditelepon atau di-WhatsApp langsung ke nomor pribadinya Budi belum?", type: "dukun" },
+                { text: "B: Apakah ada info dari teman shift lain kalau Budi mungkin telat karena macet atau kehujanan?", type: "dukun" },
+                { text: "C: Ceritakan detail komunikasi atau pesan terakhirmu dengan Budi hari ini sebelum jam pergantian shift.", type: "dokter" }
+            ],
+            feedback: {
+                dukun: "Staf: 'Sudah pak, tapi nggak aktif.' (Buntu).",
+                dokter: "Staf: 'Tadi jam 12 dia WA katanya motornya diserempet dan lagi di polsek pak, ini saya kasih screenshotnya.' (Fakta krusial terbongkar)."
+            }
+        },
+        {
+            trigger: "Pak, pas saya hitung pergantian shift, selisih stok rokok di gudang minus 5 slop.",
+            options: [
+                { text: "A: Jelaskan langkah demi langkah proses penghitungan fisik stok rokok yang baru saja kamu lakukan.", type: "dokter" },
+                { text: "B: Apakah kamu sudah mencocokkan angka hitungan fisik dengan data penerimaan barang dari DC kemarin?", type: "dukun" },
+                { text: "C: Ini minus karena ada selisih hitung dari shift malam sebelumnya atau ada barang rusak?", type: "dukun" }
+            ],
+            feedback: {
+                dukun: "Staf: 'Sudah dicocokkan pak, tapi tetap minus.' (Investigasi berhenti di sini).",
+                dokter: "Staf: 'Saya hitung fisik di rak utama dan area kasir pak, eh ternyata yang 5 slop masih di dalam karung retur BKB.' (Human error proses hitung ditemukan)."
+            }
+        },
+        {
+            trigger: "Ada konsumen komplain berat, harga di rak promo sama di struk kasir beda jauh!",
+            options: [
+                { text: "A: Apakah label harga di rak belum sempat kamu update dengan planogram promo yang baru jalan hari ini?", type: "dukun" },
+                { text: "B: Beda harganya karena sistem kasir kita belum sinkron dengan harga promo dari pusat ya?", type: "dukun" },
+                { text: "C: Gambarkan secara jelas detail barangnya, serta selisih nominal harga antara label di rak dengan struk.", type: "dokter" }
+            ],
+            feedback: {
+                dukun: "Staf: 'Labelnya udah diganti kok pak.' (Anda terjebak melempar asumsi/tuduhan halus).",
+                dokter: "Staf: 'Itemnya Susu Kaleng 800g Coklat pak, di rak labelnya masih promo 75rb, di kasir normal 90rb. Ternyata yang promo cuma varian Vanilla pak.' (Analisis root cause jelas)."
+            }
+        },
+        {
+            trigger: "Pak, freezer ice cream airnya meleleh sampai ke lantai, kotor banget.",
+            options: [
+                { text: "A: Jelaskan informasi angka dan status apa saja yang saat ini tertera di layar panel suhu freezer tersebut.", type: "dokter" },
+                { text: "B: Bocornya karena karet pintunya kurang rapat ditutup konsumen atau ada tumpahan es di bagian dalam?", type: "dukun" },
+                { text: "C: Sudah coba dibersihkan lantainya dan dicek apakah saluran pembuangan air di bawahnya mampet?", type: "dukun" }
+            ],
+            feedback: {
+                dukun: "Staf: 'Sepertinya mampet pak.' (Staf hanya menebak ulang tebakan Anda).",
+                dokter: "Staf: 'Di panel layarnya muncul error E4 pak, dan suhunya -2 derajat padahal harusnya -18.' (Kode error teknisi bisa langsung ditindaklanjuti)."
+            }
+        },
+        {
+            trigger: "Mesin kasir 2 tiba-tiba hang pas lagi transaksi pakai QRIS e-wallet.",
+            options: [
+                { text: "A: Apakah aplikasinya yang error 'Time Out' atau koneksi internet tokonya yang sedang putus-putus?", type: "dukun" },
+                { text: "B: Coba ceritakan secara berurutan, tombol atau menu apa saja yang kamu tekan sebelum layarnya freeze.", type: "dokter" },
+                { text: "C: Sudah dicoba lakukan restart mesin kasir sesuai prosedur dari tim IT atau belum?", type: "dukun" }
+            ],
+            feedback: {
+                dukun: "Staf: 'Udah di-restart pak tapi tetep.' (Masalah teknis tidak terpetakan).",
+                dokter: "Staf: 'Saya scan QRIS pelanggannya, loading lama, lalu saya pencet tombol ESC dua kali barengan sama Enter pak, terus layarnya blank.' (Penyebab sistem error diketahui)."
+            }
+        },
+        {
+            trigger: "Pak, ada ibu-ibu mau retur roti, katanya udah berjamur padahal exp date besok.",
+            options: [
+                { text: "A: Apakah kamu sudah memeriksa nota pembelian ibu tersebut untuk memastikan belinya memang di toko kita?", type: "dukun" },
+                { text: "B: Rotinya berjamur karena ditaruh di tempat yang lembap oleh konsumennya sendiri di rumah kan?", type: "dukun" },
+                { text: "C: Gambarkan secara spesifik bagaimana kondisi kemasan plastik roti tersebut saat ibu itu membawanya.", type: "dokter" }
+            ],
+            feedback: {
+                dukun: "Staf: 'Ada notanya pak.' (Anda memvalidasi prosedur retur, tapi gagal mendiagnosa kenapa roti rusak sebelum waktunya).",
+                dokter: "Staf: 'Plastik depannya ada lubang kecil bekas gigitan tikus pak, sepertinya dari rumah ibunya, pantesan udara masuk.' (Toko terselamatkan dari komplain produk cacat pabrik)."
+            }
+        },
+        {
+            trigger: "Checklist kebersihan area sales (toilet & lorong) udah saya isi full ya pak.",
+            options: [
+                { text: "A: Apakah area bawah pinggiran rak dan sudut lorong toilet juga sudah dipastikan benar-benar disikat?", type: "dukun" },
+                { text: "B: Ceritakan area mana saja yang memakan waktu paling lama saat dibersihkan dan prosedur apa yang kamu gunakan.", type: "dokter" },
+                { text: "C: Sudah disesuaikan kan hasil kerjaan kamu dengan standar kebersihan visual yang ada di SOP kita?", type: "dukun" }
+            ],
+            feedback: {
+                dukun: "Staf: 'Sudah sesuai SOP pak.' (Jawaban template untuk pertanyaan template).",
+                dokter: "Staf: 'Eee.. saya baru pel lorong utama aja pak pakai air biasa, cairan karbol toiletnya ternyata habis dari kemarin belum dateng.' (Kualitas kerja sebenarnya terungkap)."
             }
         }
+    ];
 
-        function showAlert(msg) {
-            document.getElementById('alert-msg').innerText = msg;
-            document.getElementById('alert-modal').classList.remove('hidden');
-        }
+    // --- GAME STATE & AUDIO LOGIC ---
+    let currentQ = 0;
+    let score = 0;
+    let userName = "";
+    let userReview = [];
+    let audioEnabled = true;
+    let audioCtx;
+    let bgmInterval;
 
-        function closeAlert() {
-            document.getElementById('alert-modal').classList.add('hidden');
-        }
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
 
-        // --- GAMEPLAY NAVIGATION LOGIC ---
-        function goToBriefing() {
-            const nameInput = document.getElementById('playerName').value.trim();
-            if (!nameInput) { 
-                showAlert("Harap ketik nama Anda terlebih dahulu!"); 
-                return; 
-            }
-            userName = nameInput;
-            
-            switchScreen('gateway', 'briefing');
-        }
+    function playTone(freq, type, duration, vol = 0.1) {
+        if (!audioEnabled || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
 
-        function switchScreen(fromId, toId) {
-            const fromScreen = document.getElementById(fromId);
-            const toScreen = document.getElementById(toId);
-            
-            fromScreen.classList.remove('active');
-            setTimeout(() => {
-                toScreen.classList.add('active');
-            }, 100);
-        }
+    function playBGM() {
+        if (bgmInterval) clearInterval(bgmInterval);
+        const notes = [261.63, 329.63, 392.00, 329.63]; 
+        let index = 0;
+        bgmInterval = setInterval(() => {
+            if (audioEnabled) { playTone(notes[index % notes.length] / 2, 'sine', 0.5, 0.02); index++; }
+        }, 800);
+    }
 
-        function startGame() {
-            initAudio();
-            playBGM();
-            
-            currentQ = 0;
-            score = 0;
-            userReview = [];
-            
-            document.getElementById('score-display').innerText = '0';
-            document.getElementById('chat-history').innerHTML = '';
-            
-            switchScreen('briefing', 'chat-screen');
-            document.getElementById('display-name').innerText = userName + " (SPV)";
-            
-            loadQuestion();
-        }
+    function sfxCorrect() {
+        setTimeout(() => playTone(523.25, 'square', 0.1, 0.05), 0);
+        setTimeout(() => playTone(659.25, 'square', 0.1, 0.05), 100);
+        setTimeout(() => playTone(783.99, 'square', 0.2, 0.05), 200);
+    }
 
-        function loadQuestion() {
-            if (currentQ >= questions.length) { 
-                endGame(); 
-                return; 
-            }
-            
-            const q = questions[currentQ];
-            document.getElementById('chat-options').innerHTML = ''; 
-            
-            const progress = (currentQ / questions.length) * 100;
-            document.getElementById('progress-bar').style.width = progress + '%';
+    function sfxWrong() {
+        playTone(150, 'sawtooth', 0.3, 0.08);
+        setTimeout(() => playTone(140, 'sawtooth', 0.4, 0.08), 150);
+    }
+    
+    function sfxChat() { playTone(800, 'sine', 0.05, 0.03); }
 
-            setTimeout(() => {
-                sfxChat();
-                addChatBubble(q.trigger, 'staff');
-                document.getElementById('typing-indicator').classList.remove('hidden');
-                
-                setTimeout(() => {
-                    document.getElementById('typing-indicator').classList.add('hidden');
-                    renderOptions(q);
-                }, 1000);
-            }, 300);
-        }
+    function toggleMute() {
+        audioEnabled = !audioEnabled;
+        document.getElementById('mute-btn').innerText = audioEnabled ? 'ðŸ”Š' : 'ðŸ”‡';
+    }
 
-        function addChatBubble(text, sender, isFeedback = false) {
-            const chatHist = document.getElementById('chat-history');
-            const container = document.createElement('div');
-            
-            if (isFeedback) {
-                container.className = "self-center my-1.5 w-full max-w-[92%]";
-                const isCorrect = text.startsWith("âœ…");
-                container.innerHTML = `
-                    <div class="px-3.5 py-2 rounded-xl text-xs font-semibold text-center leading-relaxed shadow-sm ${
-                        isCorrect ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' : 'bg-amber-100 text-amber-900 border border-amber-200'
-                    } bubble">
-                        ${text}
-                    </div>
-                `;
-            } else if (sender === 'staff') {
-                container.className = "self-start max-w-[85%] my-1";
-                container.innerHTML = `
-                    <div class="bg-staffBubble text-slate-800 text-xs md:text-sm px-3.5 py-2.5 rounded-2xl rounded-tl-none shadow-sm border border-slate-200/60 leading-relaxed bubble">
-                        <span class="block text-[10px] font-bold text-slate-400 mb-0.5">Staf Toko</span>
-                        ${text}
-                    </div>
-                `;
-            } else { // player
-                container.className = "self-end max-w-[85%] my-1";
-                container.innerHTML = `
-                    <div class="bg-playerBubble text-slate-900 text-xs md:text-sm px-3.5 py-2.5 rounded-2xl rounded-tr-none shadow-sm leading-relaxed bubble">
-                        <span class="block text-[10px] font-bold text-emerald-700 mb-0.5">Anda (Supervisor)</span>
-                        ${text}
-                    </div>
-                `;
-            }
+    // --- GAMEPLAY LOGIC ---
+    function goToBriefing() {
+        const name = document.getElementById('playerName').value;
+        if (!name) { alert("Harap isi nama Anda!"); return; }
+        userName = name;
+        document.getElementById('gateway').classList.remove('active');
+        document.getElementById('briefing').classList.add('active');
+    }
 
-            chatHist.appendChild(container);
-            chatHist.scrollTop = chatHist.scrollHeight;
-        }
+    function startGame() {
+        initAudio();
+        playBGM();
+        document.getElementById('briefing').classList.remove('active');
+        document.getElementById('chat-screen').classList.add('active');
+        document.getElementById('display-name').innerText = userName + " (SPV)";
+        loadQuestion();
+    }
 
-        function renderOptions(q) {
-            const optContainer = document.getElementById('chat-options');
-            optContainer.innerHTML = '';
+    function loadQuestion() {
+        if (currentQ >= questions.length) { endGame(); return; }
+        const q = questions[currentQ];
+        document.getElementById('chat-options').innerHTML = ''; 
+        
+        const progress = ((currentQ) / questions.length) * 100;
+        document.getElementById('progress-bar').style.width = progress + '%';
 
-            q.options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = "w-full text-left p-3 bg-white hover:bg-blue-50/80 active:bg-blue-100 text-slate-700 font-medium text-xs md:text-sm rounded-xl border border-slate-200 transition shadow-sm leading-snug flex items-start gap-2";
-                
-                btn.innerHTML = `
-                    <span class="inline-block mt-0.5 text-tedBlue font-bold">${opt.text.charAt(0)}:</span>
-                    <span>${opt.text.substring(3)}</span>
-                `;
-                
-                btn.onclick = () => handleAnswer(opt, q);
-                optContainer.appendChild(btn);
-            });
-        }
-
-        function handleAnswer(selectedOpt, q) {
-            document.getElementById('chat-options').innerHTML = ''; 
-            addChatBubble(selectedOpt.text.substring(3), 'player'); 
+        setTimeout(() => {
             sfxChat();
-
-            const isDokter = selectedOpt.type === 'dokter';
+            addChatBubble(q.trigger, 'staff');
+            document.getElementById('typing-indicator').style.display = 'block';
             
             setTimeout(() => {
-                if (isDokter) {
-                    sfxCorrect();
-                    score += 10;
-                    document.getElementById('score-display').innerText = score;
-                    addChatBubble("âœ… TEPAT! Anda menggali fakta mendalam dengan pertanyaan terbuka (TED).", 'feedback', true);
-                    addChatBubble(q.feedback.dokter, 'staff');
-                    userReview.push({ 
-                        status: 'Benar', 
-                        title: `Kasus ${currentQ + 1}`,
-                        text: "Berhasil menggali fakta mendalam dengan pertanyaan terbuka (TED)." 
-                    });
-                } else {
-                    sfxWrong();
-                    addChatBubble("âŒ TETOT! Ini jebakan. Jawaban Anda terdengar bagus & profesional, tapi itu pertanyaan tertutup (Yes/No) atau berasumsi.", 'feedback', true);
-                    addChatBubble(q.feedback.dukun, 'staff');
-                    userReview.push({ 
-                        status: 'Salah', 
-                        title: `Kasus ${currentQ + 1}`,
-                        text: "Terjebak pertanyaan tertutup / pilihan ganda yang membatasi informasi (Dukun)." 
-                    });
-                }
-                
-                checkBadges();
+                document.getElementById('typing-indicator').style.display = 'none';
+                renderOptions(q);
+            }, 1200);
+        }, 500);
+    }
 
-                setTimeout(() => {
-                    currentQ++;
-                    loadQuestion();
-                }, 2800);
-            }, 800);
-        }
+    function addChatBubble(text, sender, isFeedback = false) {
+        const chatHist = document.getElementById('chat-history');
+        const div = document.createElement('div');
+        div.className = `bubble ${sender}`;
+        if (isFeedback) div.classList.add('feedback');
+        div.innerText = text;
+        chatHist.appendChild(div);
+        chatHist.scrollTop = chatHist.scrollHeight;
+    }
 
-        function checkBadges() {
-            if (currentQ === 4 && score >= 40) {
-                showBadge("ðŸ… Junior Investigator (5 Kasus Selesai)");
+    function renderOptions(q) {
+        const optContainer = document.getElementById('chat-options');
+        q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.innerText = opt.text;
+            btn.onclick = () => handleAnswer(opt, q);
+            optContainer.appendChild(btn);
+        });
+    }
+
+    function handleAnswer(selectedOpt, q) {
+        document.getElementById('chat-options').innerHTML = ''; 
+        addChatBubble(selectedOpt.text.substring(3), 'player'); 
+        sfxChat();
+
+        const isDokter = selectedOpt.type === 'dokter';
+        
+        setTimeout(() => {
+            if (isDokter) {
+                sfxCorrect();
+                score += 10;
+                document.getElementById('score-display').innerText = score;
+                addChatBubble("âœ… TEPAT! Anda menggali dengan pertanyaan terbuka (TED).", 'feedback', true);
+                addChatBubble(q.feedback.dokter, 'staff');
+                userReview.push({ status: 'Benar', text: "Kasus " + (currentQ+1) + ": Berhasil menggali fakta dengan TED." });
+            } else {
+                sfxWrong();
+                addChatBubble("âŒ TETOT! Ini jebakan. Jawaban Anda terdengar bagus, tapi itu pertanyaan tertutup (Yes/No) atau berasumsi.", 'feedback', true);
+                addChatBubble(q.feedback.dukun, 'staff');
+                userReview.push({ status: 'Salah', text: "Kasus " + (currentQ+1) + ": Terjebak pertanyaan tertutup / pilihan ganda (Dukun)." });
             }
-            if (currentQ === 9 && score === 100) {
-                showBadge("ðŸ‘‘ Master Diagnostician (Perfect Score!)");
-            }
-        }
+            checkBadges();
 
-        function showBadge(text) {
-            const toast = document.getElementById('badge-toast');
-            document.getElementById('badge-text').innerText = text;
-            toast.classList.remove('hidden');
-            
             setTimeout(() => {
-                toast.classList.add('hidden');
+                currentQ++;
+                loadQuestion();
             }, 3000);
+        }, 1000);
+    }
 
-            if (audioEnabled) {
-                playTone(880, 'sine', 0.15, 0.08);
-                setTimeout(() => playTone(1108, 'sine', 0.25, 0.08), 150);
-            }
+    function checkBadges() {
+        if (currentQ === 4) showBadge("ðŸ… Junior Investigator (5 Kasus)");
+        if (currentQ === 9 && score === 100) showBadge("ðŸ‘‘ Master Diagnostician (Perfect Score!)");
+    }
+
+    function showBadge(text) {
+        const toast = document.getElementById('badge-toast');
+        toast.innerText = text;
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 3000);
+        if (audioEnabled) {
+            playTone(880, 'sine', 0.2, 0.1);
+            setTimeout(() => playTone(1108, 'sine', 0.3, 0.1), 200);
         }
+    }
 
-        function endGame() {
-            if (bgmInterval) clearInterval(bgmInterval);
-            document.getElementById('progress-bar').style.width = '100%';
+    function endGame() {
+        if (bgmInterval) clearInterval(bgmInterval);
+        document.getElementById('progress-bar').style.width = '100%';
+        
+        setTimeout(() => {
+            document.getElementById('chat-screen').classList.remove('active');
+            document.getElementById('debrief').classList.add('active');
+            document.getElementById('final-score').innerText = score;
             
-            setTimeout(() => {
-                switchScreen('chat-screen', 'debrief');
-                document.getElementById('final-score').innerText = score;
-                
-                const msgEl = document.getElementById('result-message');
-                const titleEl = document.getElementById('result-title');
-                
-                if (score >= 80) {
-                    titleEl.innerText = "Diagnostician Master ðŸŒŸ";
-                    titleEl.className = "font-extrabold text-xl text-tedBlue";
-                    msgEl.innerText = "Luar biasa! Anda tidak tertipu oleh kalimat-kalimat 'SOP/Prosedur' yang sebenarnya adalah pertanyaan tertutup. Anda benar-benar seorang Master TED!";
-                } else if (score >= 50) {
-                    titleEl.innerText = "Junior Observer ðŸ§";
-                    titleEl.className = "font-extrabold text-xl text-amber-600";
-                    msgEl.innerText = "Cukup baik! Namun Anda masih beberapa kali terjebak memberi pertanyaan pilihan ganda atau Yes/No yang membatasi informasi. Ingat: Tell, Explain, Describe!";
-                } else {
-                    titleEl.innerText = "Korban Jebakan Asumsi ðŸ”®";
-                    titleEl.className = "font-extrabold text-xl text-tedRed";
-                    msgEl.innerText = "Waduh! Anda terlalu sering menggunakan pertanyaan tertutup (Yes/No) meski terdengar sangat profesional. Ini membuat informasi krusial gagal didapatkan. Yuk berlatih TED lagi!";
-                }
+            const msgEl = document.getElementById('result-message');
+            const titleEl = document.getElementById('result-title');
+            
+            if (score >= 80) {
+                titleEl.innerText = "Diagnostician Master ðŸŒŸ";
+                titleEl.style.color = "var(--blue)";
+                msgEl.innerText = "Luar biasa! Anda tidak tertipu oleh kalimat-kalimat 'SOP/Prosedur' palsu yang sebenarnya adalah pertanyaan tertutup. Anda benar-benar seorang Master TED!";
+            } else if (score >= 50) {
+                titleEl.innerText = "Junior Observer ðŸ§";
+                titleEl.style.color = "#d35400";
+                msgEl.innerText = "Cukup baik, namun Anda masih beberapa kali terjebak memberi pertanyaan pilihan ganda atau Yes/No yang membatasi informasi. Ingat: Tell, Explain, Describe!";
+            } else {
+                titleEl.innerText = "Korban Jebakan Asumsi ðŸ”®";
+                titleEl.style.color = "var(--red)";
+                msgEl.innerText = "Waduh! Anda terlalu sering menggunakan pertanyaan tertutup (Yes/No) meski terdengar profesional. Ini membuat informasi krusial gagal didapatkan. Yuk berlatih TED lagi!";
+            }
 
-                const reviewContainer = document.getElementById('review-list');
-                reviewContainer.innerHTML = '';
-                
-                userReview.forEach(r => {
-                    const div = document.createElement('div');
-                    const isCorrect = r.status === 'Benar';
-                    div.className = `p-3 rounded-xl border text-xs leading-relaxed ${
-                        isCorrect ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900' : 'bg-red-50/80 border-red-200 text-red-900'
-                    }`;
-                    div.innerHTML = `
-                        <div class="font-bold flex items-center justify-between mb-0.5">
-                            <span>${r.title}</span>
-                            <span>${isCorrect ? 'âœ… Benar' : 'âŒ Salah'}</span>
-                        </div>
-                        <p class="opacity-90">${r.text}</p>
-                    `;
-                    reviewContainer.appendChild(div);
-                });
-            }, 800);
-        }
+            const reviewContainer = document.getElementById('review-list');
+            userReview.forEach(r => {
+                const div = document.createElement('div');
+                div.className = 'review-item';
+                div.innerHTML = `<strong>${r.status}:</strong> ${r.text}`;
+                if (r.status === 'Salah') div.style.borderLeftColor = 'var(--red)';
+                reviewContainer.appendChild(div);
+            });
+        }, 1000);
+    }
+</script>
 
-        function restartGame() {
-            switchScreen('debrief', 'gateway');
-        }
-    </script>
 </body>
 </html>
