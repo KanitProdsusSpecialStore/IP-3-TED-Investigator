@@ -114,7 +114,7 @@
 
     <!-- 1. Gateway Screen -->
     <div id="gateway" class="screen active">
-        <div class="logo-placeholder">ðŸ•µï¸â€â™‚ï¸</div>
+        <div class="logo-placeholder"></div>
         <h1 style="color: var(--blue);">The TED Investigator</h1>
         <p style="margin-top: 10px; color: #555;">Level: Professional (Hard)</p>
         
@@ -158,7 +158,7 @@
                 <div style="font-size: 10px; font-weight: normal;">Online - <span id="score-display">0</span> Pts</div>
             </div>
             <div class="controls">
-                <button id="mute-btn" onclick="toggleMute()">ðŸ”Š</button>
+                <button id="mute-btn" onclick="toggleMute()"</button>
             </div>
         </div>
         <div class="progress-container">
@@ -443,12 +443,12 @@
                 sfxCorrect();
                 score += 10;
                 document.getElementById('score-display').innerText = score;
-                addChatBubble("âœ… TEPAT! Anda menggali dengan pertanyaan terbuka (TED).", 'feedback', true);
+                addChatBubble("TEPAT! Anda menggali dengan pertanyaan terbuka (TED).", 'feedback', true);
                 addChatBubble(q.feedback.dokter, 'staff');
                 userReview.push({ status: 'Benar', text: "Kasus " + (currentQ+1) + ": Berhasil menggali fakta dengan TED." });
             } else {
                 sfxWrong();
-                addChatBubble("âŒ TETOT! Ini jebakan. Jawaban Anda terdengar bagus, tapi itu pertanyaan tertutup (Yes/No) atau berasumsi.", 'feedback', true);
+                addChatBubble("TETOT! Ini jebakan. Jawaban Anda terdengar bagus, tapi itu pertanyaan tertutup (Yes/No) atau berasumsi.", 'feedback', true);
                 addChatBubble(q.feedback.dukun, 'staff');
                 userReview.push({ status: 'Salah', text: "Kasus " + (currentQ+1) + ": Terjebak pertanyaan tertutup / pilihan ganda (Dukun)." });
             }
@@ -462,8 +462,8 @@
     }
 
     function checkBadges() {
-        if (currentQ === 4) showBadge("ðŸ… Junior Investigator (5 Kasus)");
-        if (currentQ === 9 && score === 100) showBadge("ðŸ‘‘ Master Diagnostician (Perfect Score!)");
+        if (currentQ === 4) showBadge("… Junior Investigator (5 Kasus)");
+        if (currentQ === 9 && score === 100) showBadge("Master Diagnostician (Perfect Score!)");
     }
 
     function showBadge(text) {
@@ -490,15 +490,15 @@
             const titleEl = document.getElementById('result-title');
             
             if (score >= 80) {
-                titleEl.innerText = "Diagnostician Master ðŸŒŸ";
+                titleEl.innerText = "Diagnostician Master";
                 titleEl.style.color = "var(--blue)";
                 msgEl.innerText = "Luar biasa! Anda tidak tertipu oleh kalimat-kalimat 'SOP/Prosedur' palsu yang sebenarnya adalah pertanyaan tertutup. Anda benar-benar seorang Master TED!";
             } else if (score >= 50) {
-                titleEl.innerText = "Junior Observer ðŸ§";
+                titleEl.innerText = "Junior Observer";
                 titleEl.style.color = "#d35400";
                 msgEl.innerText = "Cukup baik, namun Anda masih beberapa kali terjebak memberi pertanyaan pilihan ganda atau Yes/No yang membatasi informasi. Ingat: Tell, Explain, Describe!";
             } else {
-                titleEl.innerText = "Korban Jebakan Asumsi ðŸ”®";
+                titleEl.innerText = "Korban Jebakan Asumsi";
                 titleEl.style.color = "var(--red)";
                 msgEl.innerText = "Waduh! Anda terlalu sering menggunakan pertanyaan tertutup (Yes/No) meski terdengar profesional. Ini membuat informasi krusial gagal didapatkan. Yuk berlatih TED lagi!";
             }
